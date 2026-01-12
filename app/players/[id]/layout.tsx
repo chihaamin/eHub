@@ -10,5 +10,9 @@ export default function PlayerDetailLayout({
 }: {
     children: React.ReactNode;
 }) {
-    return <>{children}</>;
+    return (
+        <main className="h-screen">
+            {children}
+        </main>
+    );
 }

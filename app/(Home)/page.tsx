@@ -1,4 +1,4 @@
-
+import Link from "next/link";
 
 export default function Home() {
     return (
@@ -8,17 +8,16 @@ export default function Home() {
                     aria-label="Primary navigation"
                     className="flex gap-2 justify-between p-4"
                 >
-                    {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                    <a href="/">Brand</a>
+                    <Link href="/">Brand</Link>
                     <ul className="flex gap-2 justify-evenly w-1/2 ">
                         <li>
-                            <a href="/players">Players</a>
+                            <Link href="/players">Players</Link>
                         </li>
                         <li>
-                            <a href="/compare">Compare</a>
+                            <Link href="/compare">Compare</Link>
                         </li>
                         <li>
-                            <a href="/players/1">Search</a>
+                            <Link href="/players/1">Search</Link>
                         </li>
                     </ul>
                     <span> Dark-mode</span>
@@ -26,7 +25,10 @@ export default function Home() {
             </header>
 
             {/* Main Content */}
-            <main id="content" className="h-screen">
+            <main
+                id="content"
+                className="h-screen items-center flex flex-col justify-center"
+            >
                 {/* <!-- Hero / Primary Topic --> */}
                 <section>
                     <h1>Main Page Topic (Primary Keyword)</h1>
@@ -56,7 +58,10 @@ export default function Home() {
 
             {/* <!-- Footer --> */}
             <footer className="flex items-center flex-col">
-                <nav aria-label="Footer navigation" className="flex gap-4 justify-center items-center">
+                <nav
+                    aria-label="Footer navigation"
+                    className="flex gap-4 justify-center items-center"
+                >
                     <a href="/about">About</a>
                     <a href="/privacy-policy">Privacy</a>
                     <a href="/contact">Contact</a>
