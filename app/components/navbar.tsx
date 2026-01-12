@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-html-link-for-pages */
 
+import { ModeToggle } from "./themeToggle";
 
 export default function Navbar({
     props,
@@ -24,7 +25,9 @@ export default function Navbar({
                         <a href="/players/1">Search</a>
                     </li>
                 </ul>
-                <span> Dark-mode</span>
+                <span>
+                    <ModeToggle />
+                </span>
             </nav>
         </header>
     );
