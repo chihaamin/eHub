@@ -1,7 +1,4 @@
-import { Button } from "@/app/components/ui/button";
-import { Currency } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 
 export const metadata: Metadata = {
     title: "Player Details",
@@ -13,5 +10,5 @@ export default async function PlayerDetailLayout({
 }: {
     children: React.ReactNode;
 }) {
-    return <main className="h-screen">{children}</main>;
+    return <main className="h-max lg:container lg:mx-auto lg:p-2">{children}</main>;
 }
