@@ -5,17 +5,16 @@ and revalidated every 24 hours
  */
 
 import Image from "next/image";
-import PlayerImage from "../../../public/Omar.webp";
 import { Button } from "@/app/components/ui/button";
-import { BadgeCheckIcon, ChevronRightIcon, Currency } from "lucide-react";
+import { Currency } from "lucide-react";
 import { Suspense } from "react";
-import {
-    Item,
-    ItemActions,
-    ItemContent,
-    ItemMedia,
-    ItemTitle,
-} from "@/app/components/ui/item";
+import { Item } from "@/app/components/ui/item";
+import PlayerImage from "../../../public/player.png";
+import GP from "../../../public/GP.png";
+import ef_point from "../../../public/image-26.png";
+import league from "../../../public/emb_0113.png";
+import club from "../../../public/e_000177.png";
+import country from "../../../public/204.png";
 
 export const revalidate = 86400; // revalidate every 24 hours
 
@@ -33,31 +32,103 @@ export default async function Page({
     return (
         <>
             <h1 className="text-4xl p-4">player name + ID : {id}</h1>
-            <section id="player-card" className="grid grid-cols-3 grid-rows-1 gap-2">
-                <div className="flex flex-col justify-around items-center">
-                    <div>nation</div>
-                    <div>league</div>
-                    <div>locale</div>
-                    <div>price</div>
+
+            <section
+                id="player-card"
+                className="w-full self-stretch h-64 px-7 py-2 inline-flex justify-between items-center overflow-hidden"
+            >
+                <div className="w-20 h-60 p-2.5 inline-flex flex-col justify-between items-center overflow-hidden">
+                    <div className="p-1.5 bg-muted/50 rounded outline -outline-offset-1 outline-foreground/50 inline-flex justify-center items-center gap-2.5 overflow-hidden">
+                        <Suspense>
+                            <Image className="w-9 h-9 relative" src={country} alt="country" />
+                        </Suspense>
+                    </div>
+                    <div className="p-1.5 bg-muted/50 rounded outline -outline-offset-1 outline-foreground/50 inline-flex justify-center items-center gap-2.5 overflow-hidden">
+                        <Suspense>
+                            <Image className="w-9 h-9 relative" src={club} alt="club" />
+                        </Suspense>
+                    </div>
+                    <div className="p-1.5 bg-muted/50 rounded outline -outline-offset-1 outline-foreground/50 inline-flex justify-center items-center gap-2.5 overflow-hidden">
+                        <Suspense>
+                            <Image className="w-9 h-9 relative" src={league} alt="league" />
+                        </Suspense>
+                    </div>
+                    <div className="p-1.5 bg-muted/50 rounded outline -outline-offset-1 outline-foreground/50 inline-flex justify-center items-center gap-2.5 overflow-hidden">
+                        <Suspense>
+                            <Image
+                                className="w-9 h-9 relative"
+                                src={ef_point}
+                                alt="ef_point"
+                            />
+                        </Suspense>
+                    </div>
                 </div>
-                <Suspense fallback={<p>Loading..</p>}>
+                <Suspense>
                     <Image
+                        className="w-40 h-56 relative"
                         src={PlayerImage}
                         alt="Player Image"
-                        quality={40}
-                        priority={false}
-                        width={150}
-                        loading="lazy"
+                        width={162}
+                        height={229}
                     />
                 </Suspense>
-                <div className="flex flex-col justify-around items-center">
-                    <div>height</div>
-                    <div>weight</div>
-                    <div>age</div>
-                    <div>foot</div>
-                    <div>condition</div>
+
+                <div className="h-56 py-1 inline-flex flex-col justify-between items-center overflow-hidden">
+                    <div className="w-20 px-0.75 bg-muted/50 rounded-[3px] outline -outline-offset-1 outline-foreground/50 flex flex-col justify-center items-center overflow-hidden">
+                        <div className="self-stretch h-3.5 text-center justify-center text-[8px] font-normal font-['Inter']">
+                            Height
+                        </div>
+                        <div className="self-stretch h-4 text-center justify-center text-xs font-extrabold font-['Inter']">
+                            180cm
+                        </div>
+                    </div>
+                    <div className="w-20 px-0.75 bg-muted/50 rounded-[3px] outline -outline-offset-1 outline-foreground/50 flex flex-col justify-center items-center overflow-hidden">
+                        <div className="self-stretch h-3.5 text-center justify-center text-[8px] font-normal font-['Inter']">
+                            Weight
+                        </div>
+                        <div className="self-stretch h-4 text-center justify-center text-xs font-extrabold font-['Inter']">
+                            81kg
+                        </div>
+                    </div>
+                    <div className="w-20 px-0.75 bg-muted/50 rounded-[3px] outline -outline-offset-1 outline-foreground/50 flex flex-col justify-center items-center overflow-hidden">
+                        <div className="self-stretch h-3.5 text-center justify-center text-[8px] font-normal font-['Inter']">
+                            Age
+                        </div>
+                        <div className="self-stretch h-4 text-center justify-center text-xs font-extrabold font-['Inter']">
+                            30
+                        </div>
+                    </div>
+                    <div className="w-20 px-0.75 bg-muted/50 rounded-[3px] outline -outline-offset-1 outline-foreground/50 flex flex-col justify-center items-center overflow-hidden">
+                        <div className="self-stretch h-3.5 text-center justify-center text-[8px] font-normal font-['Inter']">
+                            Foot
+                        </div>
+                        <div className="self-stretch h-4 text-center justify-center text-xs font-extrabold font-['Inter']">
+                            Right
+                        </div>
+                    </div>
+                    <div className="w-20 px-0.75 bg-muted/50 rounded-[3px] outline -outline-offset-1 outline-foreground/50 flex flex-col justify-center items-center overflow-hidden">
+                        <div className="self-stretch h-3.5 text-center justify-center text-[8px] font-normal font-['Inter']">
+                            Condition
+                        </div>
+                        <div className="self-stretch h-4 text-center justify-center text-cyan-400 text-xs font-extrabold font-['Inter']">
+                            A
+                        </div>
+                    </div>
+                    <div className="w-20 bg-muted/50 rounded-[3px] outline -outline-offset-1 outline-foreground/50 inline-flex justify-center items-center overflow-hidden">
+                        <Image
+                            className="w-4 h-4 relative"
+                            src={GP}
+                            alt="GP"
+                            width={18}
+                            height={18}
+                        />
+                        <div className="flex-1 text-center justify-center text-yellow-400 text-xs font-extrabold font-['Inter']">
+                            1,800,000
+                        </div>
+                    </div>
                 </div>
             </section>
+
             <section className="flex gap-2 items-center justify-center p-2">
                 <Button>booster1-btn</Button>
                 <Currency />
@@ -162,7 +233,7 @@ export default async function Page({
                     </ul>
                 </div>
             </section>
-        </ >
+        </>
     );
 }
 

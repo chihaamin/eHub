@@ -1,6 +1,18 @@
 /* eslint-disable @next/next/no-html-link-for-pages */
 
+import { Menu, X } from "lucide-react";
 import { ModeToggle } from "./themeToggle";
+import { Button } from "./ui/button";
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from "./ui/drawer";
 
 export default function Navbar({
     props,
@@ -8,21 +20,33 @@ export default function Navbar({
     props?: React.ComponentProps<"header">;
 }) {
     return (
-        <header {...props}>
+        <header
+            {...props}
+            className="rounded-b-md  sticky top-0 bg-background/90 backdrop-blur-md z-10 shadow-md"
+        >
             <nav
                 aria-label="Primary navigation"
-                className="flex gap-2 justify-between p-4"
+                className="flex gap-2 justify-between p-4 items-center"
             >
-                <a href="/">Brand</a>
-                <ul className="flex gap-2 justify-evenly w-1/2 ">
+                <NavbarMobile />
+                <a href="/">
+                    <p className="font-bold text-2xl">eFootballHub</p>
+                </a>
+                <ul className="gap-2 justify-evenly w-1/2 hidden md:flex">
                     <li>
-                        <a href="/players">Players</a>
+                        <a href="/players">
+                            <p className="font-medium">Players</p>
+                        </a>
                     </li>
                     <li>
-                        <a href="/compare">Compare</a>
+                        <a href="/compare">
+                            <p className="font-medium">Compare</p>
+                        </a>
                     </li>
                     <li>
-                        <a href="/players/1">Search</a>
+                        <a href="/players/1">
+                            <p className="font-medium">Search</p>
+                        </a>
                     </li>
                 </ul>
                 <span>
@@ -30,5 +54,46 @@ export default function Navbar({
                 </span>
             </nav>
         </header>
+    );
+}
+
+function NavbarMobile() {
+    return (
+        <Drawer modal direction="left">
+            <DrawerTrigger className="md:hidden">
+                <Menu />
+            </DrawerTrigger>
+            <DrawerContent>
+                <DrawerHeader>
+                    <DrawerTitle className="flex w-full justify-between items-center">
+                        <a href="/">
+                            <p className="font-bold text-2xl">eFootballHub</p>
+                        </a>
+                        <DrawerClose>
+                            <X />
+                        </DrawerClose>
+                    </DrawerTitle>
+                </DrawerHeader>
+
+                <ul className="gap-2 justify-evenly w-1/2 md:hidden flex flex-col p-4 font-medium text-2xl">
+                    <li>
+                        <a href="/players">
+                            <p>Players</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/compare">
+                            <p>Compare</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/players/1">
+                            <p>Search</p>
+                        </a>
+                    </li>
+                </ul>
+                <DrawerFooter>Register / login</DrawerFooter>
+            </DrawerContent>
+        </Drawer>
     );
 }

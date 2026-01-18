@@ -4,7 +4,7 @@ export default function Footer({
     props?: React.ComponentProps<"footer">;
 }) {
     return (
-        <footer {...props}>
+        <footer {...props} className="flex flex-col justify-center items-center gap-4 p-2">
             <nav
                 aria-label="Footer navigation"
                 className="flex gap-4 justify-center items-center"

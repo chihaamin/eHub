@@ -1,28 +1,10 @@
-import Link from "next/link";
+import Footer from "../components/footer";
+import Navbar from "../components/navbar";
 
 export default function Home() {
     return (
         <>
-            <header>
-                <nav
-                    aria-label="Primary navigation"
-                    className="flex gap-2 justify-between p-4"
-                >
-                    <Link href="/">Brand</Link>
-                    <ul className="flex gap-2 justify-evenly w-1/2 ">
-                        <li>
-                            <Link href="/players">Players</Link>
-                        </li>
-                        <li>
-                            <Link href="/compare">Compare</Link>
-                        </li>
-                        <li>
-                            <Link href="/players/1">Search</Link>
-                        </li>
-                    </ul>
-                    <span> Dark-mode</span>
-                </nav>
-            </header>
+            <Navbar />
 
             {/* Main Content */}
             <main
@@ -31,7 +13,7 @@ export default function Home() {
             >
                 {/* <!-- Hero / Primary Topic --> */}
                 <section>
-                    <h1>Main Page Topic (Primary Keyword)</h1>
+                    <h1>eFootball hub</h1>
                     <p>
                         Introductory paragraph clearly explaining what this page is about.
                     </p>
@@ -39,7 +21,7 @@ export default function Home() {
 
                 {/* <!-- Core Content --> */}
                 <section>
-                    <h2>Secondary Keyword / Feature Section</h2>
+                    <h2>Player Features</h2>
                     <article>
                         <h3>Subtopic or Item</h3>
                         <p>Descriptive, keyword-rich but natural content.</p>
@@ -57,18 +39,7 @@ export default function Home() {
             </main>
 
             {/* <!-- Footer --> */}
-            <footer className="flex items-center flex-col">
-                <nav
-                    aria-label="Footer navigation"
-                    className="flex gap-4 justify-center items-center"
-                >
-                    <a href="/about">About</a>
-                    <a href="/privacy-policy">Privacy</a>
-                    <a href="/contact">Contact</a>
-                    <a href="/terms">Terms</a>
-                </nav>
-                <p>© 2026 Brand Name</p>
-            </footer>
+            <Footer />
         </>
     );
 }
