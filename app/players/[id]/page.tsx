@@ -15,20 +15,35 @@ import ef_point from "../../../public/image-26.png";
 import league from "../../../public/emb_0113.png";
 import club from "../../../public/e_000177.png";
 import country from "../../../public/204.png";
+import { Player } from "../players";
+import Papa from "papaparse";
+import fs from "fs";
+import path from "path";
 
 export const revalidate = 86400; // revalidate every 24 hours
 
 export async function generateStaticParams() {
-    // this should return a list of all player ids from the database
-    return [{ id: "1" }, { id: "2" }];
+    try {
+        const filePath = path.join(process.cwd(), "mock", "player_export.csv");
+        const csv = fs.readFileSync(filePath, "utf8");
+        const parsed = Papa.parse(csv, {
+            header: true,
+            dynamicTyping: true,
+        });
+
+        const allPlayers = parsed.data as Player[];
+        const playerIds = allPlayers.map((p) => p.PlayerID).filter(Boolean);
+        console.log(`Generating static params for ${playerIds.length} players`);
+
+        return playerIds.map((id) => ({ id: String(id) }));
+    } catch (error) {
+        console.error("Error generating static params:", error);
+        return [];
+    }
 }
 
-export default async function Page({
-    params,
-}: {
-    params: Promise<{ id: string }>;
-}) {
-    const { id } = await params;
+export default async function Page({ params }: { params: { id: string } }) {
+    const { id } = params;
     return (
         <>
             <h1 className="text-4xl p-4">player name + ID : {id}</h1>
@@ -164,7 +179,7 @@ export default async function Page({
                                         </div>
                                     </Item>
                                 </li>
-                            )
+                            ),
                         )}
                     </ul>
                 </div>
@@ -196,7 +211,7 @@ export default async function Page({
                                         </div>
                                     </Item>
                                 </li>
-                            )
+                            ),
                         )}
                     </ul>
                 </div>
@@ -228,7 +243,7 @@ export default async function Page({
                                         </div>
                                     </Item>
                                 </li>
-                            )
+                            ),
                         )}
                     </ul>
                 </div>
