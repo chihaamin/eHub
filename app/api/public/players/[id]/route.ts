@@ -1,22 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import Papa from "papaparse";
+import { NextResponse } from "next/server";
+import { Player } from "@/app/players/players";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  request: Request,
+  { params }: { params: { id: number } },
 ) {
-  const searchParams = request.nextUrl.searchParams;
-  const playersAmount = parseInt(searchParams.get("players_amount") || "20");
   const { id } = await params;
-  console.log(`Fetching player with ID: ${id}`);
-  console.log(`Fetching ${playersAmount} players`);
-  // TODO: Replace with actual database query
-  // This is mock data for now
-  const mockPlayers = Array.from({ length: playersAmount }, (_, i) => ({
-    id: `player-${i + 1}`,
-    name: `Player ${i + 1}`,
-    position: ["Forward", "Midfielder", "Defender", "Goalkeeper"][i % 4],
-    rating: Math.floor(Math.random() * 40) + 60,
-  }));
 
-  return NextResponse.json({ players: mockPlayers });
+  const filePath = path.join(process.cwd(), "mock", "player_export.csv");
+  const csv = fs.readFileSync(filePath, "utf8");
+
+  const parsed = Papa.parse(csv, {
+    header: true,
+    dynamicTyping: true,
+  });
+  const players = parsed.data as Player[];
+  // Find the one player with matching id
+  const player = players.find((p) => Number(p.PlayerID) === Number(id));
+  if (!player) {
+    return NextResponse.json({ error: "Player not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ...player });
 }

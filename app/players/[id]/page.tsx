@@ -42,11 +42,31 @@ export async function generateStaticParams() {
     }
 }
 
-export default async function Page({ params }: { params: { id: string } }) {
-    const { id } = params;
+export default async function Page({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = await params;
+
+    // Use an absolute URL so build-time fetch works in Node
+    const baseUrl =
+        process.env["NEXT_PUBLIC_APP_URL"] ??
+        (process.env["VERCEL_URL"]
+            ? `https://${process.env["VERCEL_URL"]}`
+            : "http://localhost:3000");
+
+    const Player: Player | undefined = await fetch(
+        `${baseUrl}/api/public/players/${id}`,
+        {
+            cache: "force-cache",
+            next: { revalidate },
+        },
+    ).then((res) => res.json());
+
     return (
         <>
-            <h1 className="text-4xl p-4">player name + ID : {id}</h1>
+            <h1 className="text-4xl p-4">{Player?.Name}</h1>
 
             <section
                 id="player-card"
@@ -80,11 +100,11 @@ export default async function Page({ params }: { params: { id: string } }) {
                 </div>
                 <Suspense>
                     <Image
-                        className="w-40 h-56 relative"
-                        src={PlayerImage}
-                        alt="Player Image"
-                        width={162}
-                        height={229}
+                        src={`https://efootballhub.net/images/efootball24/players/${Player?.PlayerID}_l.webp`}
+                        alt={`Player ${Player?.Name}`}
+                        width={150}
+                        height={150}
+                        className="cursor-pointer"
                     />
                 </Suspense>
 
