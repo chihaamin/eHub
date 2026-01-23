@@ -10,6 +10,7 @@ import {
     SelectValue,
 } from "./ui/select";
 import { BoosterIcon } from "./boosterIcon";
+import { cn } from "../lib/utils";
 
 export default function PlayerCard({ Player }: { Player: Player | undefined }) {
     const iconSize = 36;
@@ -17,11 +18,12 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
     return (
         <section
             id="player-card"
-            className="w-full md:w-3/4 lg:w-1/2 grid grid-cols-3 grid-rows-4 gap-4 p-4 bg-muted/50 rounded-lg justify-self-center "
+            className="w-full md:w-3/4 lg:w-1/2 grid grid-cols-4 grid-rows-4 gap-4 p-4 justify-self-center "
         >
-            <h1 className="col-span-2 text-4xl font-bold font-['Inter'] whitespace-nowrap p-4">
+            <h1 className="col-span-3 gap-2 text-[clamp(0.75rem,7cqw,2rem)] font-bold font-['Inter'] whitespace-nowrap p-4">
                 {Player?.Name}
             </h1>
+
             <h2
                 className={`text-4xl font-bold font-['Inter'] whitespace-nowrap p-4 place-self-end justify-self-center ${conditionColors(scaleBy20(Number(Player?.Overall)))}`}
             >
@@ -77,7 +79,7 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
                     alt={`Player ${Player?.Name}`}
                     height={200}
                     width={200}
-                    className="row-span-3 object-fill place-self-center"
+                    className="row-span-3 col-span-2 object-fill place-self-center"
                 />
             </Suspense>
 
@@ -105,22 +107,22 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
                     </div>
                 </div>
             </div>
-            <div className="col-span-3 flex w-full justify-around items-center">
+            <div className="col-span-4 grid grid-cols-4 justify-items-center items-center">
                 <Booster data={BoosterOptions} />
                 <BoosterIcon className="fill-cyan-300 border-foreground dark:fill-cyan-300" />
-                <BoosterIcon />
 
+                <BoosterIcon />
                 <Booster data={BoosterOptions} />
             </div>
         </section>
     );
 }
 
-const Booster = ({ data }: { data: BoosterOption[] }) => {
+const Booster = ({ data, className }: { data: BoosterOption[]; className?: string }) => {
     return (
         <Select defaultValue="No booster">
             <SelectTrigger>
-                <SelectValue placeholder="Booster" />
+                <SelectValue placeholder="Booster" className={cn("w-45", className)} />
             </SelectTrigger>
             <SelectContent>
                 {data.map((booster: BoosterOption) => (

@@ -4,10 +4,6 @@ at build time for all players in the database
 and revalidated every 24 hours 
  */
 
-import Image from "next/image";
-import { Button } from "@/app/components/ui/button";
-import { Currency } from "lucide-react";
-import { Suspense } from "react";
 import { Item } from "@/app/components/ui/item";
 
 import { Player } from "../players";
@@ -15,6 +11,25 @@ import Papa from "papaparse";
 import fs from "fs";
 import path from "path";
 import PlayerCard from "@/app/components/playerCard";
+import BackBtn from "@/app/components/backBtn";
+import {
+    Athleticismfields,
+    Attackingfields,
+    Defendingfields,
+    fieldColor,
+} from "./utils";
+
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from "@/app/components/ui/drawer";
+import { Button } from "@/app/components/ui/button";
 
 export const revalidate = 86400; // revalidate every 24 hours
 
@@ -45,7 +60,6 @@ export default async function Page({
 }) {
     const { id } = await params;
 
-
     // Use an absolute URL so build-time fetch works in Node
     const baseUrl =
         process.env["NEXT_PUBLIC_APP_URL"] ??
@@ -63,53 +77,65 @@ export default async function Page({
 
     return (
         <>
+            <div className="flex justify-start items-center gap-2 mb-4">
+                <BackBtn />
+            </div>
             <PlayerCard Player={Player} />
 
-
-            <section className="grid grid-cols-2 grid-flow-row-dense gap-4">
-                <StatsDisplayDemo Player={Player} />
+            <Drawer>
+                <section className="h-32 bg-muted rounded-md">
+                    <DrawerTrigger>
+                        <h2 className="text-xl font-semibold">Manager</h2>
+                    </DrawerTrigger>
+                </section>
+                <DrawerContent className="h-6/12 bg-background/50 backdrop-blur-md shadow-md">
+                    <DrawerHeader>
+                        <DrawerTitle>Are you absolutely sure?</DrawerTitle>
+                        <DrawerDescription>This action cannot be undone.</DrawerDescription>
+                    </DrawerHeader>
+                    <DrawerFooter>
+                        <Button>Submit</Button>
+                        <DrawerClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DrawerClose>
+                    </DrawerFooter>
+                </DrawerContent>
+            </Drawer>
+            <section className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-flow-row-dense gap-4">
+                <StatsDisplayDemo
+                    Title="Attacking"
+                    Player={Player}
+                    fields={Attackingfields}
+                />
+                <StatsDisplayDemo
+                    Title="Defending"
+                    Player={Player}
+                    fields={Defendingfields}
+                />
+                <StatsDisplayDemo
+                    Title="Athleticism"
+                    Player={Player}
+                    fields={Athleticismfields}
+                />
             </section>
         </>
     );
 }
 
-const Attackingfields = [
-    { label: "Offensive Awareness", key: "OffensiveAwareness" },
-    { label: "Ball Control", key: "BallControl" },
-    { label: "Dribbling", key: "Dribbling" },
-    { label: "Tight Possession", key: "TightPossession" },
-    { label: "Low Pass", key: "LowPass" },
-    { label: "Lofted Pass", key: "LoftedPass" },
-    { label: "Finishing", key: "Finishing" },
-    { label: "Heading", key: "Heading" },
-    { label: "Place Kicking", key: "PlaceKicking" },
-    { label: "Curl", key: "Curl" },
-    { label: "Stamina", key: "Stamina" },
-];
-
-const fieldColor = (value: number) => {
-    switch (true) {
-        case value > 30 && value <= 60:
-            return "bg-red-400!";
-        case value <= 80 && value > 60:
-            return "bg-yellow-500!";
-        case value <= 90 && value > 80:
-            return "bg-green-400!";
-        case value > 90:
-            return "bg-cyan-400!";
-        default:
-            return "bg-red-400";
-    }
-};
-
-
-
-function StatsDisplayDemo({ Player }: { Player: Player | undefined }) {
+function StatsDisplayDemo({
+    Title,
+    Player,
+    fields,
+}: {
+    Title: string;
+    Player: Player | undefined;
+    fields?: { label: string; key: string }[];
+}) {
     return (
         <div className="p-4">
-            <h2 className="text-xl font-black capitalize">attacking</h2>
+            <h2 className="text-2xl py-4 font-black capitalize">{Title}</h2>
             <ul>
-                {Attackingfields.map((field, index) => (
+                {fields?.map((field, index) => (
                     <li key={index}>
                         <Item
                             variant={index % 2 === 0 ? "muted" : "default"}
@@ -117,16 +143,16 @@ function StatsDisplayDemo({ Player }: { Player: Player | undefined }) {
                             asChild
                             className="p-2"
                         >
-                            <div className="flex justify-between items-center w-full flex-nowrap">
+                            <div className="flex justify-between items-center mobile:flex-nowrap">
                                 <div>
-                                    <p className="font-bold text-xs md:text-base">
+                                    <p className="font-light text-sm font-[inter] md:text-base">
                                         {field.label}
                                     </p>
                                 </div>
                                 <div
                                     className={`bg-red-400 ${fieldColor(Player?.[field.key as keyof Player] as number)} px-2 py-1 rounded-sm`}
                                 >
-                                    <p className="font-bold text-xs md:text-base">
+                                    <p className="font-bold text-sm md:text-base">
                                         {Player?.[field.key as keyof Player]}
                                     </p>
                                 </div>

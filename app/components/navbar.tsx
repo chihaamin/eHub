@@ -13,6 +13,8 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from "./ui/drawer";
+import { KbdInputGroup } from "./searchInput";
+import { SearchForm } from "./Search-components/search-form";
 
 export default function Navbar({
     props,
@@ -44,8 +46,8 @@ export default function Navbar({
                         </a>
                     </li>
                     <li>
-                        <a href="/players/1">
-                            <p className="font-medium">Search</p>
+                        <a href="/search">
+                            <p>Search</p>
                         </a>
                     </li>
                 </ul>
@@ -87,7 +89,7 @@ function NavbarMobile() {
                         </a>
                     </li>
                     <li>
-                        <a href="/players/1">
+                        <a href="/search">
                             <p>Search</p>
                         </a>
                     </li>
