@@ -12,6 +12,7 @@ import fs from "fs";
 import path from "path";
 import PlayerCard from "@/app/components/playerCard";
 import BackBtn from "@/app/components/backBtn";
+import CompareButton from "@/app/components/compareButton";
 import {
     Athleticismfields,
     Attackingfields,
@@ -30,6 +31,8 @@ import {
     DrawerTrigger,
 } from "@/app/components/ui/drawer";
 import { Button } from "@/app/components/ui/button";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 export const revalidate = 86400; // revalidate every 24 hours
 
@@ -79,6 +82,22 @@ export default async function Page({
         <>
             <div className="flex justify-start items-center gap-2 mb-4">
                 <BackBtn />
+                <CompareButton
+                    player={{
+                        id: Player?.PlayerID ?? null,
+                        Name: String(Player?.Name ?? ""),
+                        AccentedName: Player?.AccentedName
+                            ? String(Player.AccentedName)
+                            : undefined,
+                        JapName: Player?.JapName ? String(Player.JapName) : undefined,
+                        Overall: Player?.Reputation ?? null,
+                    }}
+                />
+
+                <Link href="/compare" className="cursor-pointer hover:bg-muted/50 rounded-md p-2 flex justify-between items-center">
+                    <ChevronRight />
+                </Link>
+
             </div>
             <PlayerCard Player={Player} />
 

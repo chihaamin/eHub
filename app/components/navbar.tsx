@@ -3,6 +3,7 @@
 import { Menu, X } from "lucide-react";
 import { ModeToggle } from "./themeToggle";
 import { SearchCommand } from "./Search-components/search-form";
+import { SearchFilter } from "./Search-components/search-filter-btn";
 
 import {
     Drawer,
@@ -42,11 +43,6 @@ export default function Navbar({
                             <p className="font-medium">Compare</p>
                         </a>
                     </li>
-                    <li>
-                        <a href="/search">
-                            <p className="font-medium">Search</p>
-                        </a>
-                    </li>
                 </ul>
                 <div className="flex items-center gap-2">
                     <SearchCommand />
@@ -84,11 +80,6 @@ function NavbarMobile() {
                     <li>
                         <a href="/compare">
                             <p>Compare</p>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/search">
-                            <p>Search</p>
                         </a>
                     </li>
                 </ul>

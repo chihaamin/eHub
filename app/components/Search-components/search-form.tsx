@@ -13,9 +13,11 @@ import {
 import { CommandGroup } from "cmdk";
 import { Button } from "../ui/button";
 import { Kbd } from "../ui/kbd";
-import { Search, Loader2, History, GitCompare, X, Check } from "lucide-react";
+import { Search, Loader2, History, GitCompare, X, Check, SlidersHorizontal } from "lucide-react";
 import { conditionColors, scaleBy20 } from "@/app/players/[id]/utils";
 import { useCompareStore, ComparePlayer } from "@/app/compare/compare-store";
+import { CompareReplaceDialog } from "@/app/components/compareReplaceDialog";
+import { useFilterStore, SearchFilters, FilterRange } from "./filter-store";
 
 const HISTORY_KEY = "search-history";
 const MAX_HISTORY = 3;
@@ -85,8 +87,51 @@ export function SearchCommand() {
     // Compare store
     const { players: comparePlayers, addPlayer, removePlayer, isInCompare } = useCompareStore();
 
+    // Filter store
+    const { filters, hasActiveFilters, getActiveFilterCount } = useFilterStore();
+
     // Keyboard shortcut to toggle search
     useHotkeys([["mod+k", () => setOpen((o) => !o)]]);
+
+    // Build filter query params
+    const buildFilterParams = useCallback((currentFilters: SearchFilters): string => {
+        const params = new URLSearchParams();
+
+        const rangeKeys: (keyof SearchFilters)[] = [
+            "overall",
+            "offensiveAwareness",
+            "ballControl",
+            "dribbling",
+            "finishing",
+            "lowPass",
+            "loftedPass",
+            "defensiveAwareness",
+            "ballWinning",
+            "speed",
+            "acceleration",
+            "physicalContact",
+            "stamina",
+        ];
+
+        rangeKeys.forEach((key) => {
+            const range = currentFilters[key] as FilterRange;
+            if (range?.min !== null && range?.min !== undefined) {
+                params.append(`${key}Min`, String(range.min));
+            }
+            if (range?.max !== null && range?.max !== undefined) {
+                params.append(`${key}Max`, String(range.max));
+            }
+        });
+
+        if (currentFilters.position) {
+            params.append("position", currentFilters.position);
+        }
+        if (currentFilters.strongerFoot) {
+            params.append("strongerFoot", currentFilters.strongerFoot);
+        }
+
+        return params.toString();
+    }, []);
 
     // Filter cached players based on search term
     const filterCachedPlayers = useCallback(
@@ -113,6 +158,7 @@ export function SearchCommand() {
             searchTerm: string,
             currentOffset: number,
             append: boolean = false,
+            currentFilters: SearchFilters = filters,
         ) => {
             // Cancel previous request
             if (abortControllerRef.current) {
@@ -125,7 +171,8 @@ export function SearchCommand() {
 
             try {
                 const encodedSearch = encodeURIComponent(searchTerm.trim() || "_all");
-                const url = `/api/public/search/${encodedSearch}?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`;
+                const filterParams = buildFilterParams(currentFilters);
+                const url = `/api/public/search/${encodedSearch}?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}${filterParams ? `&${filterParams}` : ""}`;
 
                 const res = await fetch(url, {
                     signal: abortControllerRef.current.signal,
@@ -137,10 +184,12 @@ export function SearchCommand() {
 
                 const data: SearchResponse = await res.json();
 
-                // Update cache with new players (avoid duplicates)
-                const existingIds = new Set(cachedPlayers.map((p) => p.id));
-                const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
-                cachedPlayers = [...cachedPlayers, ...newPlayers];
+                // Only cache if no filters are active
+                if (!hasActiveFilters()) {
+                    const existingIds = new Set(cachedPlayers.map((p) => p.id));
+                    const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
+                    cachedPlayers = [...cachedPlayers, ...newPlayers];
+                }
 
                 // Update displayed players
                 if (append) {
@@ -160,7 +209,7 @@ export function SearchCommand() {
                 loadingState(false);
             }
         },
-        [],
+        [buildFilterParams, filters, hasActiveFilters],
     );
 
     // Load search history when dialog opens
@@ -174,41 +223,53 @@ export function SearchCommand() {
     useEffect(() => {
         if (open && cachedPlayers.length === 0) {
             fetchPlayers("", 0, false);
-        } else if (open && cachedPlayers.length > 0 && !value.trim()) {
-            // Show cached players when opening
+        } else if (open && cachedPlayers.length > 0 && !value.trim() && !hasActiveFilters()) {
+            // Show cached players when opening (only if no filters)
             setDisplayedPlayers(cachedPlayers.slice(0, ITEMS_PER_PAGE));
             setHasMore(cachedPlayers.length > ITEMS_PER_PAGE);
             setOffset(ITEMS_PER_PAGE);
+        } else if (open && hasActiveFilters()) {
+            // Fetch with filters
+            fetchPlayers(value.trim(), 0, false);
         }
-    }, [open, fetchPlayers, value]);
+    }, [open, fetchPlayers, value, hasActiveFilters]);
+
+    // Re-fetch when filters change
+    useEffect(() => {
+        if (open) {
+            setOffset(0);
+            fetchPlayers(debouncedSearch.trim(), 0, false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters]);
 
     // Handle search term changes
     useEffect(() => {
         const trimmedSearch = debouncedSearch.trim();
 
-        // Filter from cache immediately
-        const filtered = filterCachedPlayers(trimmedSearch);
+        // Filter from cache immediately (only if no filters active)
+        const filtered = !hasActiveFilters() ? filterCachedPlayers(trimmedSearch) : [];
         setFilteredFromCache(filtered);
 
         // Reset offset for new search
         setOffset(0);
 
-        // If no search term, show initial cached players
-        if (!trimmedSearch) {
+        // If no search term and no filters, show initial cached players
+        if (!trimmedSearch && !hasActiveFilters()) {
             setDisplayedPlayers(cachedPlayers.slice(0, ITEMS_PER_PAGE));
             setHasMore(cachedPlayers.length > ITEMS_PER_PAGE);
             setOffset(ITEMS_PER_PAGE);
             return;
         }
 
-        // Show filtered results from cache first, then fetch fresh data
-        if (filtered.length > 0) {
+        // Show filtered results from cache first (if no filters), then fetch fresh data
+        if (filtered.length > 0 && !hasActiveFilters()) {
             setDisplayedPlayers(filtered.slice(0, ITEMS_PER_PAGE));
         }
 
         // Fetch from API for fresh/complete results
         fetchPlayers(trimmedSearch, 0, false);
-    }, [debouncedSearch, filterCachedPlayers, fetchPlayers]);
+    }, [debouncedSearch, filterCachedPlayers, fetchPlayers, hasActiveFilters]);
 
     // Handle scroll for infinite loading
     const handleScroll = useCallback(
@@ -485,6 +546,8 @@ export function SearchCommand() {
                         )}
                 </CommandList>
             </CommandDialog>
+
+            <CompareReplaceDialog />
         </>
     );
 }

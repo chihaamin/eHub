@@ -215,7 +215,6 @@ function PlayerCompareCard({
                         width={80}
                         className="object-contain shrink-0"
                     />
-
                 </div>
             </div>
 
@@ -244,7 +243,6 @@ function PlayerCompareCard({
                         <X className="h-4 w-4" />
                     </button>
                 </span>
-
 
                 <div className="row-span-3 flex flex-col justify-evenly items-center gap-1">
                     <Image
