@@ -11,6 +11,7 @@ import {
 } from "./ui/select";
 import { BoosterIcon } from "./boosterIcon";
 import { cn } from "../lib/utils";
+import { conditionColors, scaleBy20 } from "../players/[id]/utils";
 
 export default function PlayerCard({ Player }: { Player: Player | undefined }) {
     const iconSize = 36;
@@ -37,6 +38,7 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
                             alt="country"
                             width={iconSize}
                             height={iconSize}
+                            loading="eager"
                         />
                     </Suspense>
                 </div>
@@ -47,6 +49,7 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
                             alt="team"
                             width={iconSize}
                             height={iconSize}
+                            loading="eager"
                         />
                     </Suspense>
                 </div>
@@ -57,6 +60,7 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
                             alt="leagues"
                             width={iconSize}
                             height={iconSize}
+                            loading="eager"
                         />
                     </Suspense>
                 </div>
@@ -68,6 +72,7 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
                             alt="GP"
                             width={iconSize}
                             height={iconSize}
+                            loading="eager"
                         />
                     </Suspense>
                     <div className="font-medium">{Player?.MarketValue}</div>
@@ -79,7 +84,8 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
                     alt={`Player ${Player?.Name}`}
                     height={200}
                     width={200}
-                    className="row-span-3 col-span-2 object-fill place-self-center"
+                    className="row-span-3 col-span-2 object-fill place-self-center h-auto"
+                    loading="eager"
                 />
             </Suspense>
 
@@ -118,7 +124,13 @@ export default function PlayerCard({ Player }: { Player: Player | undefined }) {
     );
 }
 
-const Booster = ({ data, className }: { data: BoosterOption[]; className?: string }) => {
+const Booster = ({
+    data,
+    className,
+}: {
+    data: BoosterOption[];
+    className?: string;
+}) => {
     return (
         <Select defaultValue="No booster">
             <SelectTrigger>
@@ -163,24 +175,3 @@ const conditionToLetter = (condition: string | number | null | undefined) => {
             return "E";
     }
 };
-
-const conditionColors = (condition: string | number | null | undefined) => {
-    switch (Number(condition)) {
-        case 0:
-            return "text-red-400";
-        case 1:
-            return "text-orange-400";
-        case 2:
-            return "text-yellow-400";
-        case 3:
-            return "text-lime-400";
-        case 4:
-            return "text-green-400";
-        default:
-            return "text-red-400";
-    }
-};
-
-function scaleBy20(value: number): number {
-    return Math.min(4, Math.floor((value - 40) / 20));
-}

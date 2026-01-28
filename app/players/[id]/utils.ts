@@ -47,3 +47,26 @@ export const fieldColor = (value: number) => {
       return "bg-red-400";
   }
 };
+
+export const conditionColors = (
+  condition: string | number | null | undefined,
+) => {
+  switch (Number(condition)) {
+    case 0:
+      return "text-red-400";
+    case 1:
+      return "text-orange-400";
+    case 2:
+      return "text-yellow-400";
+    case 3:
+      return "text-lime-400";
+    case 4:
+      return "text-green-400";
+    default:
+      return "text-red-400";
+  }
+};
+
+export function scaleBy20(value: number): number {
+  return Math.min(4, Math.floor((value - 40) / 20));
+}

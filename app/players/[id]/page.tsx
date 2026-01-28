@@ -83,18 +83,17 @@ export default async function Page({
             <PlayerCard Player={Player} />
 
             <Drawer>
-                <section className="h-32 bg-muted rounded-md">
-                    <DrawerTrigger>
-                        <h2 className="text-xl font-semibold">Manager</h2>
-                    </DrawerTrigger>
-                </section>
+                <DrawerTrigger asChild className="h-32 bg-muted rounded-md">
+                    <h2 className="text-xl font-semibold">Manager</h2>
+                </DrawerTrigger>
+
                 <DrawerContent className="h-6/12 bg-background/50 backdrop-blur-md shadow-md">
                     <DrawerHeader>
                         <DrawerTitle>Are you absolutely sure?</DrawerTitle>
                         <DrawerDescription>This action cannot be undone.</DrawerDescription>
                     </DrawerHeader>
                     <DrawerFooter>
-                        <Button>Submit</Button>
+                        <Button asChild>Submit</Button>
                         <DrawerClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DrawerClose>

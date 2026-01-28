@@ -2,20 +2,17 @@
 
 import { Menu, X } from "lucide-react";
 import { ModeToggle } from "./themeToggle";
-import { Button } from "./ui/button";
+import { SearchCommand } from "./Search-components/search-form";
+
 import {
     Drawer,
     DrawerClose,
     DrawerContent,
-    DrawerDescription,
     DrawerFooter,
     DrawerHeader,
     DrawerTitle,
     DrawerTrigger,
 } from "./ui/drawer";
-import { KbdInputGroup } from "./searchInput";
-import { SearchForm } from "./Search-components/search-form";
-
 export default function Navbar({
     props,
 }: {
@@ -24,7 +21,7 @@ export default function Navbar({
     return (
         <header
             {...props}
-            className="rounded-b-md  sticky top-0 bg-background/90 backdrop-blur-md z-10 shadow-md"
+            className="rounded-b-md sticky top-0 bg-background/90 backdrop-blur-md z-10 shadow-md dark:shadow-white/5 border-b"
         >
             <nav
                 aria-label="Primary navigation"
@@ -47,13 +44,14 @@ export default function Navbar({
                     </li>
                     <li>
                         <a href="/search">
-                            <p>Search</p>
+                            <p className="font-medium">Search</p>
                         </a>
                     </li>
                 </ul>
-                <span>
+                <div className="flex items-center gap-2">
+                    <SearchCommand />
                     <ModeToggle />
-                </span>
+                </div>
             </nav>
         </header>
     );

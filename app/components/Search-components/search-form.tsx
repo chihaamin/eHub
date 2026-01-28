@@ -1,25 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import {
-    InputGroup,
-    InputGroupAddon,
-    InputGroupInput,
-} from "@/app/components/ui/input-group";
-import { ChevronRightIcon, Search } from "lucide-react";
-
-import { cn } from "@/app/lib/utils";
-import {
-    Item,
-    ItemActions,
-    ItemContent,
-    ItemMedia,
-    ItemTitle,
-} from "../ui/item";
-import Link from "next/link";
-import { SearchFilter } from "./search-filter-btn";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useDebounce } from "hooks/use-debounce";
+import { useHotkeys } from "@mantine/hooks";
+import {
+    CommandDialog,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "../ui/command";
+import { CommandGroup } from "cmdk";
+import { Button } from "../ui/button";
+import { Kbd } from "../ui/kbd";
+import { Search, Loader2, History, GitCompare, X, Check } from "lucide-react";
+import { conditionColors, scaleBy20 } from "@/app/players/[id]/utils";
+import { useCompareStore, ComparePlayer } from "@/app/compare/compare-store";
+
+const HISTORY_KEY = "search-history";
+const MAX_HISTORY = 3;
 
 interface SearchResult {
     id: string | number | null;
@@ -29,171 +28,463 @@ interface SearchResult {
     Overall?: string | number | null;
 }
 
-const COLORS = {
-    TOP: "hsl(203, 92%, 48%)",
-} as const;
+interface SearchResponse {
+    players: SearchResult[];
+    total: number;
+    hasMore: boolean;
+}
 
-// CVA Variants for SearchForm sizes
-const searchFormVariants = cva("relative rounded-md w-full", {
-    variants: {
-        size: {
-            sm: "max-w-xs",
-            md: "max-w-sm md:max-w-md",
-            lg: "max-w-md md:max-w-lg lg:max-w-2xl",
-        },
-    },
-    defaultVariants: {
-        size: "md",
-    },
-});
+const ITEMS_PER_PAGE = 20;
 
-// CVA Variants for result text sizes
-const resultTextVariants = cva("font-black", {
-    variants: {
-        size: {
-            sm: "text-xs",
-            md: "text-sm",
-            lg: "text-base",
-        },
-    },
-    defaultVariants: {
-        size: "md",
-    },
-});
+// Global cache for all fetched players
+let cachedPlayers: SearchResult[] = [];
 
-// CVA Variants for item title sizes
-const itemTitleVariants = cva("text-nowrap font-semibold", {
-    variants: {
-        size: {
-            sm: "text-xs md:text-xs",
-            md: "text-xs md:text-lg",
-            lg: "text-sm md:text-xl",
-        },
-    },
-    defaultVariants: {
-        size: "md",
-    },
-});
+// Get search history from localStorage
+function getSearchHistory(): SearchResult[] {
+    if (typeof window === "undefined") return [];
+    try {
+        const stored = localStorage.getItem(HISTORY_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+}
 
-const getOverallColor = (v?: string | number | null): string | undefined => {
-    const n = Number(v ?? NaN);
-    if (Number.isNaN(n)) return undefined;
-    const clamped = Math.max(40, Math.min(100, n));
-    if (clamped >= 90) return COLORS.TOP;
-    const t = (clamped - 40) / 50;
-    const hue = Math.round(t * 120);
-    return `hsl(${hue}, 70%, 40%)`;
-};
+// Save player to search history
+function addToSearchHistory(player: SearchResult): void {
+    if (typeof window === "undefined" || player.id == null) return;
+    try {
+        const history = getSearchHistory();
+        // Remove if already exists
+        const filtered = history.filter((p) => p.id !== player.id);
+        // Add to front and limit to MAX_HISTORY
+        const updated = [player, ...filtered].slice(0, MAX_HISTORY);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    } catch {
+        // Ignore localStorage errors
+    }
+}
 
-type SearchFormProps = VariantProps<typeof searchFormVariants>;
-
-export function SearchForm({
-    size = "md",
-    withFilter = false,
-}: SearchFormProps & { withFilter?: boolean }) {
+export function SearchCommand() {
+    const [open, setOpen] = useState(false);
+    const router = useRouter();
     const [value, setValue] = useState("");
-    const debounceSearch = useDebounce(value);
-    const [player, setPlayer] = useState<SearchResult[]>([]);
-    const [isFocused, setIsFocused] = useState(false);
-    const wrapperRef = useRef<HTMLDivElement | null>(null);
+    const [displayedPlayers, setDisplayedPlayers] = useState<SearchResult[]>([]);
+    const [filteredFromCache, setFilteredFromCache] = useState<SearchResult[]>(
+        [],
+    );
+    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [offset, setOffset] = useState(0);
+    const debouncedSearch = useDebounce(value, 300);
+    const listRef = useRef<HTMLDivElement>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const [searchHistory, setSearchHistory] = useState<SearchResult[]>([]);
 
-    const isOpen = isFocused && player.length > 0 && debounceSearch.length > 0;
+    // Compare store
+    const { players: comparePlayers, addPlayer, removePlayer, isInCompare } = useCompareStore();
 
+    // Keyboard shortcut to toggle search
+    useHotkeys([["mod+k", () => setOpen((o) => !o)]]);
+
+    // Filter cached players based on search term
+    const filterCachedPlayers = useCallback(
+        (searchTerm: string): SearchResult[] => {
+            if (!searchTerm.trim()) return cachedPlayers;
+            const q = searchTerm.toLowerCase();
+            return cachedPlayers.filter(
+                (p) =>
+                    String(p.Name).toLowerCase().includes(q) ||
+                    String(p.AccentedName || "")
+                        .toLowerCase()
+                        .includes(q) ||
+                    String(p.JapName || "")
+                        .toLowerCase()
+                        .includes(q),
+            );
+        },
+        [],
+    );
+
+    // Fetch players from API
+    const fetchPlayers = useCallback(
+        async (
+            searchTerm: string,
+            currentOffset: number,
+            append: boolean = false,
+        ) => {
+            // Cancel previous request
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            abortControllerRef.current = new AbortController();
+
+            const loadingState = append ? setIsLoadingMore : setIsLoading;
+            loadingState(true);
+
+            try {
+                const encodedSearch = encodeURIComponent(searchTerm.trim() || "_all");
+                const url = `/api/public/search/${encodedSearch}?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`;
+
+                const res = await fetch(url, {
+                    signal: abortControllerRef.current.signal,
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error! Status: ${res.status}`);
+                }
+
+                const data: SearchResponse = await res.json();
+
+                // Update cache with new players (avoid duplicates)
+                const existingIds = new Set(cachedPlayers.map((p) => p.id));
+                const newPlayers = data.players.filter((p) => !existingIds.has(p.id));
+                cachedPlayers = [...cachedPlayers, ...newPlayers];
+
+                // Update displayed players
+                if (append) {
+                    setDisplayedPlayers((prev) => [...prev, ...data.players]);
+                } else {
+                    setDisplayedPlayers(data.players);
+                }
+
+                setHasMore(data.hasMore);
+                setOffset(currentOffset + ITEMS_PER_PAGE);
+            } catch (err) {
+                if (err instanceof Error && err.name === "AbortError") {
+                    return;
+                }
+                console.error("Error fetching search results:", err);
+            } finally {
+                loadingState(false);
+            }
+        },
+        [],
+    );
+
+    // Load search history when dialog opens
     useEffect(() => {
-        if (!debounceSearch.trim()) {
+        if (open) {
+            setSearchHistory(getSearchHistory());
+        }
+    }, [open]);
+
+    // Initial fetch when dialog opens
+    useEffect(() => {
+        if (open && cachedPlayers.length === 0) {
+            fetchPlayers("", 0, false);
+        } else if (open && cachedPlayers.length > 0 && !value.trim()) {
+            // Show cached players when opening
+            setDisplayedPlayers(cachedPlayers.slice(0, ITEMS_PER_PAGE));
+            setHasMore(cachedPlayers.length > ITEMS_PER_PAGE);
+            setOffset(ITEMS_PER_PAGE);
+        }
+    }, [open, fetchPlayers, value]);
+
+    // Handle search term changes
+    useEffect(() => {
+        const trimmedSearch = debouncedSearch.trim();
+
+        // Filter from cache immediately
+        const filtered = filterCachedPlayers(trimmedSearch);
+        setFilteredFromCache(filtered);
+
+        // Reset offset for new search
+        setOffset(0);
+
+        // If no search term, show initial cached players
+        if (!trimmedSearch) {
+            setDisplayedPlayers(cachedPlayers.slice(0, ITEMS_PER_PAGE));
+            setHasMore(cachedPlayers.length > ITEMS_PER_PAGE);
+            setOffset(ITEMS_PER_PAGE);
             return;
         }
 
-        fetch(`/api/public/search/${encodeURIComponent(debounceSearch)}`)
-            .then((res) => res.json())
-            .then((data) => {
-                setPlayer(data ? data : []);
-            })
-            .catch((err) => {
-                console.log("Error fetching search results:", err);
-                setPlayer([]);
-            });
-    }, [debounceSearch]);
+        // Show filtered results from cache first, then fetch fresh data
+        if (filtered.length > 0) {
+            setDisplayedPlayers(filtered.slice(0, ITEMS_PER_PAGE));
+        }
+
+        // Fetch from API for fresh/complete results
+        fetchPlayers(trimmedSearch, 0, false);
+    }, [debouncedSearch, filterCachedPlayers, fetchPlayers]);
+
+    // Handle scroll for infinite loading
+    const handleScroll = useCallback(
+        (e: React.UIEvent<HTMLDivElement>) => {
+            const target = e.currentTarget;
+            const scrolledToBottom =
+                target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
+
+            if (scrolledToBottom && hasMore && !isLoading && !isLoadingMore) {
+                fetchPlayers(debouncedSearch.trim(), offset, true);
+            }
+        },
+        [hasMore, isLoading, isLoadingMore, offset, debouncedSearch, fetchPlayers],
+    );
+
+    // Reset state when dialog closes
+    const handleOpenChange = useCallback((newOpen: boolean) => {
+        setOpen(newOpen);
+        if (!newOpen) {
+            setValue("");
+            setDisplayedPlayers([]);
+            setFilteredFromCache([]);
+            setOffset(0);
+            setHasMore(true);
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        }
+    }, []);
+
+    // Navigate to player and close dialog
+    const handleSelectPlayer = useCallback(
+        (player: SearchResult) => {
+            if (player.id == null) return;
+            // Add to search history
+            addToSearchHistory(player);
+            setSearchHistory(getSearchHistory());
+            setOpen(false);
+            router.push(`/players/${player.id}`);
+        },
+        [router],
+    );
+
+    // Toggle player in compare list
+    const handleToggleCompare = useCallback(
+        (e: React.MouseEvent, player: SearchResult) => {
+            e.stopPropagation();
+            if (player.id == null) return;
+
+            const comparePlayer: ComparePlayer = {
+                id: player.id,
+                Name: player.Name,
+                AccentedName: player.AccentedName,
+                JapName: player.JapName,
+                Overall: player.Overall,
+            };
+
+            if (isInCompare(player.id)) {
+                removePlayer(player.id);
+            } else {
+                addPlayer(comparePlayer);
+            }
+        },
+        [addPlayer, removePlayer, isInCompare],
+    );
 
     return (
-        <div
-            ref={wrapperRef}
-            className={cn(searchFormVariants({ size }))}
-            role="search"
-        >
-            <InputGroup>
-                <InputGroupInput
-                    placeholder="Search player..."
+        <>
+            <Button
+                variant="outline"
+                className="relative h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2"
+                onClick={() => setOpen(true)}
+            >
+                <Search className="h-4 w-4 xl:mr-2" />
+                <span className="hidden xl:inline-flex">Search players...</span>
+                <Kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 xl:flex">
+                    <span className="text-xs">⌘</span>K
+                </Kbd>
+            </Button>
+
+            <CommandDialog
+                open={open}
+                onOpenChange={handleOpenChange}
+                className="max-w-sm rounded-lg border h-auto"
+                title="Search player"
+            >
+                <CommandInput
+                    placeholder="Search players..."
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    onFocus={() => setIsFocused(true)}
-                    id="player-search"
-                    aria-label="Search player by name"
-                    aria-expanded={isOpen}
-                    aria-controls="search-results-list"
-                    autoComplete="off"
+                    onValueChange={setValue}
                 />
-                <InputGroupAddon>
-                    <Search />
-                </InputGroupAddon>
-                {withFilter && (
-                    <InputGroupAddon align="inline-end">
-                        <SearchFilter />
-                    </InputGroupAddon>
-                )}
-            </InputGroup>
-
-            {isOpen && (
-                <div
-                    role="region"
-                    aria-label="Search results"
-                    id="search-results-list"
-                    className="bg-background ring-foreground/30 absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-2xl shadow-lg ring"
+                <CommandList
+                    ref={listRef}
+                    onScroll={handleScroll}
+                    className="max-h-[300px] overflow-y-auto"
                 >
-                    <ul
-                        className="no-scrollbar flex max-h-96 flex-col gap-2 overflow-y-auto p-2"
-                        role="listbox"
-                        aria-label="Search results list"
-                    >
-                        {player.map((p) => (
-                            <li key={`player-${p.id}`} role="option" aria-selected="false">
-                                <Item variant="outline" size="sm" asChild>
-                                    <Link href={`/players/${p.id}`}>
-                                        <ItemMedia>
-                                            <p
-                                                className={cn(resultTextVariants({ size }))}
-                                                style={{
-                                                    color: getOverallColor(p.Overall) || "inherit",
-                                                }}
-                                                aria-label={`Overall-rating:${p.Overall}`}
+                    {/* Search history */}
+                    {!value.trim() && searchHistory.length > 0 && (
+                        <CommandGroup heading="Recent">
+                            {searchHistory.map((p) => (
+                                <CommandItem
+                                    key={`history-player-${p.id}`}
+                                    value={`history-${p.AccentedName ?? p.Name}`}
+                                    onSelect={() => handleSelectPlayer(p)}
+                                    className="flex items-center gap-2"
+                                >
+                                    <History className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <div className="flex justify-between items-center w-full min-w-0">
+                                        <span className="flex items-center gap-2 truncate">
+                                            <p className="font-medium truncate">{p.AccentedName ?? p.Name}</p>
+                                        </span>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {p.Overall && (
+                                                <span
+                                                    className={`text-sm ${conditionColors(scaleBy20(Number(p.Overall)))}`}
+                                                >
+                                                    {p.Overall}
+                                                </span>
+                                            )}
+                                            <button
+                                                onClick={(e) => handleToggleCompare(e, p)}
+                                                className={`p-1 rounded-md transition-colors ${isInCompare(p.id)
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "hover:bg-muted"
+                                                    }`}
+                                                title={isInCompare(p.id) ? "Remove from compare" : "Add to compare"}
                                             >
-                                                {p.Overall}
-                                            </p>
-                                        </ItemMedia>
-                                        <ItemContent>
-                                            <ItemTitle
-                                                className={cn(
-                                                    itemTitleVariants({ size }),
-                                                    "flex w-full items-baseline justify-between gap-2 text-center",
+                                                {isInCompare(p.id) ? (
+                                                    <Check className="h-4 w-4" />
+                                                ) : (
+                                                    <GitCompare className="h-4 w-4" />
                                                 )}
-                                            >
-                                                <p>{p.AccentedName}</p>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
 
-                                                <small lang="ja">{p.JapName}</small>
-                                            </ItemTitle>
-                                        </ItemContent>
-                                        <ItemActions>
-                                            <div>
-                                                <ChevronRightIcon className="size-4" />
-                                            </div>
-                                        </ItemActions>
-                                    </Link>
-                                </Item>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-        </div>
+                    {/* Compare players */}
+                    {!value.trim() && comparePlayers.length > 0 && (
+                        <CommandGroup heading="Compare">
+                            {comparePlayers.map((p) => (
+                                <CommandItem
+                                    key={`compare-player-${p.id}`}
+                                    value={`compare-${p.AccentedName ?? p.Name}`}
+                                    onSelect={() => {
+                                        setOpen(false);
+                                        router.push(`/players/${p.id}`);
+                                    }}
+                                    className="flex items-center gap-2"
+                                >
+                                    <GitCompare className="h-4 w-4 shrink-0 text-primary" />
+                                    <div className="flex justify-between items-center w-full min-w-0">
+                                        <span className="flex items-center gap-2 truncate">
+                                            <p className="font-medium truncate">{p.AccentedName ?? p.Name}</p>
+                                        </span>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {p.Overall && (
+                                                <span
+                                                    className={`text-sm ${conditionColors(scaleBy20(Number(p.Overall)))}`}
+                                                >
+                                                    {p.Overall}
+                                                </span>
+                                            )}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removePlayer(p.id);
+                                                }}
+                                                className="p-1 rounded-md hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                                                title="Remove from compare"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </CommandItem>
+                            ))}
+                            {comparePlayers.length === 2 && (
+                                <CommandItem
+                                    value="go-to-compare"
+                                    onSelect={() => {
+                                        setOpen(false);
+                                        router.push("/compare");
+                                    }}
+                                    className="justify-center text-primary font-medium"
+                                >
+                                    <GitCompare className="h-4 w-4 mr-2" />
+                                    Compare Players
+                                </CommandItem>
+                            )}
+                        </CommandGroup>
+                    )}
+
+                    {/* Initial loading state */}
+                    {isLoading && displayedPlayers.length === 0 && (
+                        <div className="py-6 flex justify-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+
+                    {/* No results found */}
+                    {!isLoading &&
+                        debouncedSearch.trim() &&
+                        displayedPlayers.length === 0 &&
+                        filteredFromCache.length === 0 && (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                No players found.
+                            </div>
+                        )}
+
+                    {/* Player list */}
+                    {displayedPlayers.length > 0 && (
+                        <CommandGroup heading="Players">
+                            {displayedPlayers.map((p) => (
+                                <CommandItem
+                                    key={`kbd-player-${p.id}`}
+                                    value={p.AccentedName ?? p.Name}
+                                    onSelect={() => handleSelectPlayer(p)}
+                                    className="flex items-center gap-2"
+                                >
+                                    <div className="flex justify-between items-center w-full min-w-0">
+                                        <span className="flex items-center gap-2 truncate">
+                                            <p className="font-medium truncate">{p.AccentedName ?? p.Name}</p>
+                                            <span className="text-muted-foreground">|</span>
+                                            <p className="font-light text-muted-foreground truncate">{p.JapName}</p>
+                                        </span>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {p.Overall && (
+                                                <span
+                                                    className={`text-sm ${conditionColors(scaleBy20(Number(p.Overall)))}`}
+                                                >
+                                                    {p.Overall}
+                                                </span>
+                                            )}
+                                            <button
+                                                onClick={(e) => handleToggleCompare(e, p)}
+                                                className={`p-1 rounded-md transition-colors ${isInCompare(p.id)
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "hover:bg-muted"
+                                                    }`}
+                                                title={isInCompare(p.id) ? "Remove from compare" : "Add to compare"}
+                                            >
+                                                {isInCompare(p.id) ? (
+                                                    <Check className="h-4 w-4" />
+                                                ) : (
+                                                    <GitCompare className="h-4 w-4" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    )}
+
+                    {/* Loading more indicator */}
+                    {(isLoadingMore || (isLoading && displayedPlayers.length > 0)) && (
+                        <div className="py-4 flex justify-center">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+
+                    {/* End of list indicator */}
+                    {!hasMore &&
+                        displayedPlayers.length > 0 &&
+                        !isLoading &&
+                        !isLoadingMore && (
+                            <div className="py-2 text-center text-xs text-muted-foreground">
+                                No more players
+                            </div>
+                        )}
+                </CommandList>
+            </CommandDialog>
+        </>
     );
 }
