@@ -32,7 +32,7 @@ import {
 } from "@/app/components/ui/drawer";
 import { Button } from "@/app/components/ui/button";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, GitCompare } from "lucide-react";
 
 export const revalidate = 86400; // revalidate every 24 hours
 
@@ -95,7 +95,7 @@ export default async function Page({
                 />
 
                 <Link href="/compare" className="cursor-pointer hover:bg-muted/50 rounded-md p-2 flex justify-between items-center">
-                    <ChevronRight />
+                    <GitCompare /><ChevronRight />
                 </Link>
 
             </div>

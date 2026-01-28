@@ -18,6 +18,7 @@ import { conditionColors, scaleBy20 } from "@/app/players/[id]/utils";
 import { useCompareStore, ComparePlayer } from "@/app/compare/compare-store";
 import { CompareReplaceDialog } from "@/app/components/compareReplaceDialog";
 import { useFilterStore, SearchFilters, FilterRange } from "./filter-store";
+import { SearchFilter } from "./search-filter-btn";
 
 const HISTORY_KEY = "search-history";
 const MAX_HISTORY = 3;
@@ -353,14 +354,19 @@ export function SearchCommand() {
             <CommandDialog
                 open={open}
                 onOpenChange={handleOpenChange}
-                className="max-w-sm rounded-lg border h-auto"
+                className="max-w-sm rounded-lg border h-auto flex justify-center items-center"
                 title="Search player"
             >
-                <CommandInput
-                    placeholder="Search players..."
-                    value={value}
-                    onValueChange={setValue}
-                />
+                <div className="flex items-center gap-2 border-b pr-8 pl-2">
+                    <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input
+                        placeholder="Search players..."
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="flex-1 h-11 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                    <SearchFilter />
+                </div>
                 <CommandList
                     ref={listRef}
                     onScroll={handleScroll}

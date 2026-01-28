@@ -29,7 +29,7 @@ interface SearchFilters {
 
 // Map filter keys to player properties
 const filterKeyToPlayerKey: Record<string, keyof Player> = {
-  overall: "Reputation",
+  overall: "Overall",
   offensiveAwareness: "OffensiveAwareness",
   ballControl: "BallControl",
   dribbling: "Dribbling",
@@ -155,7 +155,7 @@ export async function GET(
       Name: String(p.Name),
       AccentedName: String(p.AccentedName),
       JapName: String(p.JapName),
-      Overall: p.Reputation,
+      Overall: p.Overall,
     }));
 
     return NextResponse.json({
@@ -181,7 +181,7 @@ export async function GET(
       Name: String(p.Name),
       AccentedName: String(p.AccentedName),
       JapName: String(p.JapName),
-      Overall: p.Reputation,
+      Overall: p.Overall,
     }));
 
   return NextResponse.json({
