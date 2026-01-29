@@ -6,7 +6,7 @@ import { Player } from "@/app/players/players";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: number } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 
