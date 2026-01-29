@@ -36,16 +36,25 @@ import { ChevronRight, GitCompare } from "lucide-react";
 
 export const revalidate = 86400; // revalidate every 24 hours
 
+// Cache parsed players to avoid re-parsing CSV for each page
+let cachedPlayers: Player[] | null = null;
+
+function getPlayers(): Player[] {
+    if (cachedPlayers) return cachedPlayers;
+
+    const filePath = path.join(process.cwd(), "mock", "player_export.csv");
+    const csv = fs.readFileSync(filePath, "utf8");
+    const parsed = Papa.parse(csv, {
+        header: true,
+        dynamicTyping: true,
+    });
+    cachedPlayers = parsed.data as Player[];
+    return cachedPlayers;
+}
+
 export async function generateStaticParams() {
     try {
-        const filePath = path.join(process.cwd(), "mock", "player_export.csv");
-        const csv = fs.readFileSync(filePath, "utf8");
-        const parsed = Papa.parse(csv, {
-            header: true,
-            dynamicTyping: true,
-        });
-
-        const allPlayers = parsed.data as Player[];
+        const allPlayers = getPlayers();
         const playerIds = allPlayers.map((p) => p.PlayerID).filter(Boolean);
         console.log(`Generating static params for ${playerIds.length} players`);
 
@@ -63,20 +72,10 @@ export default async function Page({
 }) {
     const { id } = await params;
 
-    // Use an absolute URL so build-time fetch works in Node
-    const baseUrl =
-        process.env["NEXT_PUBLIC_APP_URL"] ??
-        (process.env["VERCEL_URL"]
-            ? `https://${process.env["VERCEL_URL"]}`
-            : "http://localhost:3000");
-
-    const Player: Player | undefined = await fetch(
-        `${baseUrl}/api/public/players/${id}`,
-        {
-            cache: "force-cache",
-            next: { revalidate },
-        },
-    ).then((res) => res.json());
+    const players = getPlayers();
+    const Player: Player | undefined = players.find(
+        (p) => String(p.PlayerID) === id
+    );
 
     return (
         <>

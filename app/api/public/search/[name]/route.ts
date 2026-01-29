@@ -68,10 +68,10 @@ function parseFilters(url: URL): SearchFilters {
     const minParam = url.searchParams.get(`${key}Min`);
     const maxParam = url.searchParams.get(`${key}Max`);
     if (minParam || maxParam) {
-      filters[key as keyof SearchFilters] = {
+      (filters[key as keyof SearchFilters] as FilterRange) = {
         min: minParam ? parseInt(minParam) : null,
         max: maxParam ? parseInt(maxParam) : null,
-      } as FilterRange;
+      };
     }
   });
 
@@ -122,7 +122,7 @@ function applyFilters(players: Player[], filters: SearchFilters): Player[] {
 // Returns up to N matching players (name + id) for autocomplete
 export async function GET(
   request: Request,
-  { params }: { params: { name: string } },
+  { params }: { params: Promise<{ name: string }> },
 ) {
   const { name } = await params;
   const url = new URL(request.url);
